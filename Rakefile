@@ -68,16 +68,16 @@ task :html do
   require 'dimensions'
 
   File.open(File.expand_path('images.html', __dir__), 'w') do |f|
-    f.write %(<!DOCTYPE html>\n<title></title>\n<body style="margin:0">)
-    Dir[File.expand_path(File.join('images', '60x90', '*'), __dir__)].select do |image|
-      # Exclude those with beveling, borders, uncentered, placeholder, errors, etc.
-      !File.basename(image)[/\A(?:www.ville.brossard.qc.ca|www.gov.mb.ca|www.haldimandcounty.on.ca|www.hamilton.ca)_|_(silhouette|jonesyvonne|eddie_francis|bennett-bill|krog-leonard|mcrae-don|wilkinson-andrew)/]
+    f.write %(<!DOCTYPE html>\n<title></title>\n<body style="margin:0">\n)
+    Dir[File.expand_path(File.join('images', '60x90', '*'), __dir__)].reject do |image|
+      # Exclude images with beveling, borders, uncentered, silhouettes, errors, etc.
+      File.basename(image)[/\A(?:www.ville.brossard.qc.ca|www.gov.mb.ca|www.haldimandcounty.on.ca|www.hamilton.ca)_|_(silhouette|jonesyvonne|eddie_francis|bennett-bill|krog-leonard|mcrae-don|wilkinson-andrew)/]
     end.shuffle.each_slice(32) do |images|
-      f.write %(<div style="width:1920px">)
+      f.write %(<div style="width:1920px">\n)
       images.each do |image|
-        f.write %(<img src="#{image}" width="60" style="float:left">)
+        f.write %(<img src="#{image}" width="60" style="float:left">\n)
       end
-      f.write %(</div>)
+      f.write %(</div>\n)
     end
   end
 end
@@ -86,7 +86,6 @@ desc 'Resizes images'
 task :resize do
   %w(60x90).each do |size|
     FileUtils.mkdir_p(File.expand_path(File.join('images', size), __dir__))
-
     Dir[File.expand_path(File.join('images', 'original', '*'), __dir__)].each do |image|
       output = `convert #{image} -resize #{size}^ -gravity center -extent #{size} #{File.expand_path(File.join('images', size, File.basename(image)), __dir__)} 2>&1`
       unless output.empty?
@@ -162,10 +161,7 @@ task :download do
         if response.headers.key?('content-disposition')
           filename = Mechanize::HTTP::ContentDispositionParser.parse(response.headers['content-disposition']).filename
         else
-          filename = URI.unescape(parsed.path).force_encoding('utf-8').tr(
-            "ÀÁÂÃÄÅàáâãäåĀāĂăĄąÇçĆćĈĉĊċČčÐðĎďĐđÈÉÊËèéêëĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħÌÍÎÏìíîïĨĩĪīĬĭĮįİıĴĵĶķĸĹĺĻļĽľĿŀŁłÑñŃńŅņŇňŉŊŋÒÓÔÕÖØòóôõöøŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšſŢţŤťŦŧÙÚÛÜùúûüŨũŪūŬŭŮůŰűŲųŴŵÝýÿŶŷŸŹźŻżŽž",
-            "AAAAAAaaaaaaAaAaAaCcCcCcCcCcDdDdDdEEEEeeeeEeEeEeEeEeGgGgGgGgHhHhIIIIiiiiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnNnnNnOOOOOOooooooOoOoOoRrRrRrSsSsSsSssTtTtTtUUUUuuuuUuUuUuUuUuUuWwYyyYyYZzZzZz"
-          )[1..-1]
+          filename = URI.unescape(parsed.path)[1..-1]
           if host == 'cms.burlington.ca'
             filename = "#{parsed.query[/\d+\z/]}_#{filename}"
           end
@@ -191,7 +187,12 @@ task :download do
           filenames[filename] = true
         end
 
-        filepath = File.expand_path(File.join('images', 'original', "#{host}_#{filename.gsub(%r{['()/ ]|%20}, '_').downcase}"), __dir__)
+        filename = filename.force_encoding('utf-8').tr(
+          "ÀÁÂÃÄÅàáâãäåĀāĂăĄąÇçĆćĈĉĊċČčÐðĎďĐđÈÉÊËèéêëĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħÌÍÎÏìíîïĨĩĪīĬĭĮįİıĴĵĶķĸĹĺĻļĽľĿŀŁłÑñŃńŅņŇňŉŊŋÒÓÔÕÖØòóôõöøŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšſŢţŤťŦŧÙÚÛÜùúûüŨũŪūŬŭŮůŰűŲųŴŵÝýÿŶŷŸŹźŻżŽž",
+          "AAAAAAaaaaaaAaAaAaCcCcCcCcCcDdDdDdEEEEeeeeEeEeEeEeEeGgGgGgGgHhHhIIIIiiiiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnNnnNnOOOOOOooooooOoOoOoRrRrRrSsSsSsSssTtTtTtUUUUuuuuUuUuUuUuUuUuWwYyyYyYZzZzZz"
+        ).gsub(%r{['()/ ]|%20}, '_').downcase
+
+        filepath = File.expand_path(File.join('images', 'original', "#{host}_#{filename}"), __dir__)
         unless File.exist?(filepath)
           open(filepath, 'wb') do |f|
             f.write(response.body)
