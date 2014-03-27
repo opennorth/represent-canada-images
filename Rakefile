@@ -1,24 +1,113 @@
 require 'bundler/setup'
 
-require 'set'
-require 'uri'
-
-require 'active_support/cache'
-require 'govkit-ca'
-require 'mechanize'
-require 'faraday_middleware'
-require 'faraday_middleware/response_middleware'
-
 task default: :download
 
-desc 'Deletes photos'
-task :clean do
-  FileUtils.rm_rf(File.expand_path('photos', __dir__))
+def sizes
+  require 'dimensions'
+
+  @sizes ||= Hash.new(0).tap do |hash|
+    Dir[File.expand_path(File.join('images', 'original', '*'), __dir__)].each do |image|
+      dimensions = Dimensions.dimensions(image)
+      if dimensions
+        hash[Dimensions.dimensions(image)] += 1
+      end
+    end
+  end
 end
 
-desc 'Downloads photos from Represent'
+desc 'Deletes images'
+task :clean do
+  FileUtils.rm_rf(File.expand_path('images', __dir__))
+end
+
+desc 'Reports image sizes'
+task :sizes do
+  sizes.sort.each do |size,count|
+    puts "%4d  #{size * 'x'}" % count
+  end
+
+  puts sizes.values.reduce(:+)
+end
+
+desc 'Reports aspect ratios'
+task :ratios do
+  ratios = Hash.new(0)
+  sizes.each do |size,count|
+    ratio = Rational(*size)
+    ratio = case ratio.round(2)
+    when 0.61, 0.62, 0.63 # 0.618
+      'golden'
+    when 0.66, 0.67, 0.68 # 0.666
+      Rational(2, 3)
+    when 0.70, 0.71, 0.72 # 0.714
+      Rational(5, 7)
+    when 0.74, 0.75, 0.76 # 0.75
+      Rational(3, 4)
+    when 0.79, 0.80, 0.81 # 0.8
+      Rational(4, 5)
+    when 1.00
+      Rational(1, 1)
+    when 1.50
+      Rational(3, 2)
+    else
+      ratio
+    end
+    ratios[ratio] += count
+  end
+
+  total = sizes.values.reduce(:+).to_f
+  ratios.sort_by(&:last).reject{|_,v| v < 5}.each do |ratio,count|
+    puts "%4d  %4.1f%%  %.2f  #{ratio}" % [count, count / total.to_f * 100, ratio == 'golden' ? 0.61803398875 : Float(ratio)]
+  end
+
+  puts total.to_i
+end
+
+desc 'Creates an HTML page of images'
+task :html do
+  require 'dimensions'
+
+  File.open(File.expand_path('images.html', __dir__), 'w') do |f|
+    f.write %(<!DOCTYPE html>\n<title></title>\n<body style="margin:0">)
+    Dir[File.expand_path(File.join('images', '60x90', '*'), __dir__)].select do |image|
+      # Exclude those with beveling, borders, uncentered, placeholder, errors, etc.
+      !File.basename(image)[/\A(?:www.ville.brossard.qc.ca|www.gov.mb.ca|www.haldimandcounty.on.ca|www.hamilton.ca)_|_(silhouette|jonesyvonne|eddie_francis|bennett-bill|krog-leonard|mcrae-don|wilkinson-andrew)/]
+    end.shuffle.each_slice(32) do |images|
+      f.write %(<div style="width:1920px">)
+      images.each do |image|
+        f.write %(<img src="#{image}" width="60" style="float:left">)
+      end
+      f.write %(</div>)
+    end
+  end
+end
+
+desc 'Resizes images'
+task :resize do
+  %w(60x90).each do |size|
+    FileUtils.mkdir_p(File.expand_path(File.join('images', size), __dir__))
+
+    Dir[File.expand_path(File.join('images', 'original', '*'), __dir__)].each do |image|
+      output = `convert #{image} -resize #{size}^ -gravity center -extent #{size} #{File.expand_path(File.join('images', size, File.basename(image)), __dir__)} 2>&1`
+      unless output.empty?
+        puts "Error converting #{image}"
+      end
+    end
+  end
+end
+
+desc 'Downloads images from Represent'
 task :download do
-  %w(cache_represent cache_photos photos).each do |directory|
+  require 'set'
+  require 'uri'
+
+  require 'active_support/cache'
+  require 'govkit-ca'
+  require 'mechanize'
+  require 'faraday_middleware'
+  require 'faraday_middleware/response_middleware'
+
+  %w(cache_represent cache_images images/original).each do |directory|
     FileUtils.mkdir_p(File.expand_path(directory, __dir__))
   end
 
@@ -53,7 +142,7 @@ task :download do
     connection.request :url_encoded
     connection.use FaradayMiddleware::FollowRedirects
     connection.response :caching do
-      ActiveSupport::Cache::FileStore.new('cache_photos')
+      ActiveSupport::Cache::FileStore.new('cache_images')
     end
     connection.adapter Faraday.default_adapter
   end
@@ -73,7 +162,10 @@ task :download do
         if response.headers.key?('content-disposition')
           filename = Mechanize::HTTP::ContentDispositionParser.parse(response.headers['content-disposition']).filename
         else
-          filename = parsed.path.gsub('/', '_')[1..-1]
+          filename = URI.unescape(parsed.path).force_encoding('utf-8').tr(
+            "ÀÁÂÃÄÅàáâãäåĀāĂăĄąÇçĆćĈĉĊċČčÐðĎďĐđÈÉÊËèéêëĒēĔĕĖėĘęĚěĜĝĞğĠġĢģĤĥĦħÌÍÎÏìíîïĨĩĪīĬĭĮįİıĴĵĶķĸĹĺĻļĽľĿŀŁłÑñŃńŅņŇňŉŊŋÒÓÔÕÖØòóôõöøŌōŎŏŐőŔŕŖŗŘřŚśŜŝŞşŠšſŢţŤťŦŧÙÚÛÜùúûüŨũŪūŬŭŮůŰűŲųŴŵÝýÿŶŷŸŹźŻżŽž",
+            "AAAAAAaaaaaaAaAaAaCcCcCcCcCcDdDdDdEEEEeeeeEeEeEeEeEeGgGgGgGgHhHhIIIIiiiiIiIiIiIiIiJjKkkLlLlLlLlLlNnNnNnNnnNnOOOOOOooooooOoOoOoRrRrRrSsSsSsSssTtTtTtUUUUuuuuUuUuUuUuUuUuWwYyyYyYZzZzZz"
+          )[1..-1]
           if host == 'cms.burlington.ca'
             filename = "#{parsed.query[/\d+\z/]}_#{filename}"
           end
@@ -99,7 +191,7 @@ task :download do
           filenames[filename] = true
         end
 
-        filepath = File.expand_path(File.join('photos', "#{host}_#{filename.gsub(/ |%20/, '_').downcase}"), __dir__)
+        filepath = File.expand_path(File.join('images', 'original', "#{host}_#{filename.gsub(%r{['()/ ]|%20}, '_').downcase}"), __dir__)
         unless File.exist?(filepath)
           open(filepath, 'wb') do |f|
             f.write(response.body)
