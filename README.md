@@ -12,6 +12,8 @@ Download and resize images:
     rake download
     rake resize
 
+You now have the original images in `images/original` and 60x90 images in `60x90`. `60x90` was chosen because the smallest image is 63 pixels wide and 95 pixels high and the most common aspect ratio is 2:3.
+
 Consult the image sizes and aspect ratios:
 
     rake sizes
@@ -25,6 +27,10 @@ Create an HTML page with all the 60x90 images:
 Remove all images:
 
     rake clean
+
+## Contributing
+
+If you would like to retrieve more photos with these scripts, improve our [Canadian legislative scrapers](https://github.com/opencivicdata/scrapers-ca/) to scrape images from legislative websites.
 
 ## Bugs? Questions?
 
