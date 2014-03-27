@@ -28,6 +28,6 @@ Remove all images:
 
 ## Bugs? Questions?
 
-This project's main repository is on GitHub: [http://github.com/opennorth/represent-canada-photos](http://github.com/opennorth/represent-canada-photos), where your contributions, forks, bug reports, feature requests, and feedback are greatly welcomed.
+This project's main repository is on GitHub: [http://github.com/opennorth/represent-canada-images](http://github.com/opennorth/represent-canada-images), where your contributions, forks, bug reports, feature requests, and feedback are greatly welcomed.
 
 Copyright (c) 2014 Open North Inc., released under the MIT license
