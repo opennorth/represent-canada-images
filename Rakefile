@@ -70,8 +70,8 @@ task :html do
   File.open(File.expand_path('images.html', __dir__), 'w') do |f|
     f.write %(<!DOCTYPE html>\n<title></title>\n<body style="margin:0">\n)
     Dir[File.expand_path(File.join('images', '60x90', '*'), __dir__)].reject do |image|
-      # Exclude images with beveling, borders, uncentered, silhouettes, errors, etc.
-      File.basename(image)[/\A(?:www.ville.brossard.qc.ca|www.gov.mb.ca|www.haldimandcounty.on.ca|www.hamilton.ca)_|_(silhouette|jonesyvonne|eddie_francis|bennett-bill|krog-leonard|mcrae-don|wilkinson-andrew)/]
+      # Exclude images with beveling, borders, uncentered, grayscale, silhouettes, errors, etc.
+      File.basename(image)[/\A(?:www.gov.mb.ca|www.greatersudbury.ca|www.haldimandcounty.on.ca|www.hamilton.ca|www.stjohns.ca|www.ville.brossard.qc.ca)_|_(silhouette|jonesyvonne|eddie_francis|bennett-bill|krog-leonard|mcrae-don|wilkinson-andrew)/]
     end.shuffle.each_slice(32) do |images|
       f.write %(<div style="width:1920px">\n)
       images.each do |image|
