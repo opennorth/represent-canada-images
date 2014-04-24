@@ -131,12 +131,6 @@ task :download do
     offset += 1000
   end until response['meta']['next'].nil?
 
-  # @see https://github.com/opencivicdata/scrapers-ca/issues/72
-  photo_urls.reject! do |photo_url|
-    parsed = URI.parse(URI.escape(photo_url))
-    %w(regina.ca www.calgary.ca www.cityofkingston.ca www.strathcona.ca).include?(parsed.host) && parsed.path[%r{(?:/|\.aspx|/district\d+|/gerretsen)\z}]
-  end
-
   client = Faraday.new do |connection|
     connection.request :url_encoded
     connection.use FaradayMiddleware::FollowRedirects
@@ -151,7 +145,11 @@ task :download do
 
   photo_urls.each do |photo_url|
     begin
-      url = URI.escape(photo_url)
+      url = if photo_url['%20']
+        photo_url
+      else
+        URI.escape(photo_url)
+      end
       response = client.get(url)
 
       if response.status == 200
@@ -162,18 +160,29 @@ task :download do
           filename = Mechanize::HTTP::ContentDispositionParser.parse(response.headers['content-disposition']).filename
         else
           filename = URI.unescape(parsed.path)[1..-1]
-          if host == 'cms.burlington.ca'
+          # Ensure unique filenames.
+          case host
+          when 'cms.burlington.ca'
             filename = "#{parsed.query[/\d+\z/]}_#{filename}"
+          when 'www.assnat.qc.ca'
+            filename = "#{parsed.query[/(?<=asset=)[^&]+/]}_#{filename}"
           end
         end
 
         if response.headers.key?('content-type')
-          extension = MIME::Types[response.headers['content-type']].first.extensions.last
+          content_type = if response.headers['content-type'] == 'Image/.jpg'
+            'image/jpeg'
+          else
+            response.headers['content-type']
+          end
+          extension = MIME::Types[content_type].first.extensions.last
         else
           extension = File.extname(filename)[1..-1]
         end
         unless %w(gif jpg png).include?(extension)
-          raise "Unrecognized extension '#{extension}' for #{photo_url}"
+          puts "#{"\n" if success}Unrecognized extension '#{extension}' for #{photo_url}"
+          success = false
+          next
         end
 
         # The content-type extension may already be the current extension.
@@ -202,7 +211,7 @@ task :download do
         print '.'
         success = true
       else
-        puts "#{"\n" if success}#{response.status} #{photo_url}"
+        puts "#{"\n" if success}#{response.status} #{url}"
         success = false
       end
     rescue FaradayMiddleware::RedirectLimitReached
