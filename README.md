@@ -1,8 +1,8 @@
 # Represent API: Images
 
-[Represent](http://represent.opennorth.ca) is the open database of Canadian elected officials and electoral districts. It provides a [REST API](http://represent.opennorth.ca/api/) to boundary, representative, and postcode resources.
+[Represent](https://represent.opennorth.ca/) is the open database of Canadian elected officials and electoral districts. It provides a [REST API](https://represent.opennorth.ca/api/) to boundary, representative, and postcode resources.
 
-This repository stores scripts to extract images from the database. The [represent-canada](http://github.com/opennorth/represent-canada) repository is what's running at [represent.opennorth.ca](http://represent.opennorth.ca/).
+This repository stores scripts to extract images from the database. The [represent-canada](http://github.com/opennorth/represent-canada) repository is what's running at [represent.opennorth.ca](https://represent.opennorth.ca/).
 
 ## Usage
 
