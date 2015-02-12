@@ -32,8 +32,4 @@ Remove all images:
 
 If you would like to retrieve more photos with these scripts, improve our [Canadian legislative scrapers](https://github.com/opencivicdata/scrapers-ca/) to scrape images from legislative websites.
 
-## Bugs? Questions?
-
-This project's main repository is on GitHub: [https://github.com/opennorth/represent-canada-images](https://github.com/opennorth/represent-canada-images), where your contributions, forks, bug reports, feature requests, and feedback are greatly welcomed.
-
 Copyright (c) 2014 Open North Inc., released under the MIT license
