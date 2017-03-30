@@ -1,6 +1,6 @@
 source 'https://rubygems.org'
 
-gem 'activesupport'
+gem 'activesupport', '<5'
 gem 'dimensions'
 gem 'govkit-ca'
 gem 'mechanize'
